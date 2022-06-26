@@ -2,7 +2,7 @@
 
 - command to install django: pip install django
 
--command to run server: python .\manage.py runserver
+- command to run server: python .\manage.py runserver
 
 - admin username (user/passs: admin)
 
