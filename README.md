@@ -1,9 +1,11 @@
 # toDo
 
-# pip install django
+- command to install django: pip install django
 
-# admin username (user/passs: admin)
+-command to run server: python .\manage.py runserver
 
-admin page: http://localhost:8000/admin/
+- admin username (user/passs: admin)
 
-homepage: http://localhost:8000/login/
+- admin page: http://localhost:8000/admin/
+
+- homepage: http://localhost:8000/login/
