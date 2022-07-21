@@ -8,3 +8,5 @@ urlpatterns = [
     path('__gen_500/', __gen_500_errors),
     path('', include('django_db_logger.urls'))
 ]
+
+handler404 = 'django_db_logger.views.error_404_view'

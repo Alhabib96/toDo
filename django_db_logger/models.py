@@ -1,4 +1,5 @@
 import logging
+from unicodedata import category
 from django.db import models
 from six import python_2_unicode_compatible
 from django.utils.translation import gettext_lazy as _
@@ -6,11 +7,22 @@ from django.contrib.auth.models import User
 # Create your models here.
 
 
+TASK_CATEGORY_CHOICES = [
+    ('SPORTS', 'Sports'),
+    ('FOOD & DRINK', 'Food & Drink'),
+    ('WORK', 'Work'),
+    ('PERSONAL', 'Personal'),
+    ('STUDY', 'Study'),
+    ('VISIT', 'Visit'),
+    ('OTHER', 'Other'),
+]
+
 class Task(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, null=True, blank=True)
     title = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
+    category = models.CharField(null=True, choices=TASK_CATEGORY_CHOICES, default='OT', max_length=20)
     complete = models.BooleanField(default=False)
     created = models.DateTimeField(auto_now_add=True)
 
@@ -19,6 +31,8 @@ class Task(models.Model):
 
     class Meta:
         order_with_respect_to = 'user'
+
+
 
 LOG_LEVELS = (
     (logging.NOTSET, _('NotSet')),

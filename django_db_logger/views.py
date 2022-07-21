@@ -1,9 +1,12 @@
+from ast import excepthandler
 import logging
+import re
 
 from django.http import HttpResponse
+from flask_login import user_accessed
 
 logger = logging.getLogger('db')
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormView
@@ -29,6 +32,8 @@ class CustomLoginView(LoginView):
     redirect_authenticated_user = True
 
     def get_success_url(self):
+        kwargs={"username": self.request.user.username}['username']
+        logger.info("User " +kwargs+ " is successfuly loged in")
         return reverse_lazy('tasks')
 
 
@@ -42,8 +47,10 @@ class RegisterPage(FormView):
         user = form.save()
         if user is not None:
             login(self.request, user)
+        kwargs={"username": self.request.user.username}['username']
+        logger.info("User "+kwargs+" is successfuly registered")
         return super(RegisterPage, self).form_valid(form)
-
+    
     def get(self, *args, **kwargs):
         if self.request.user.is_authenticated:
             return redirect('tasks')
@@ -58,14 +65,17 @@ class TaskList(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['tasks'] = context['tasks'].filter(user=self.request.user)
         context['count'] = context['tasks'].filter(complete=False).count()
-
         search_input = self.request.GET.get('search-area') or ''
         if search_input:
+            kwargs={"username": self.request.user.username}['username']
+            logger.info("User "+kwargs+" filtered by \""+search_input+"\"")
             context['tasks'] = context['tasks'].filter(
                 title__contains=search_input)
 
         context['search_input'] = search_input
 
+        
+        
         return context
 
 
@@ -77,27 +87,46 @@ class TaskDetail(LoginRequiredMixin, DetailView):
 
 class TaskCreate(LoginRequiredMixin, CreateView):
     model = Task
-    fields = ['title', 'description', 'complete']
+    fields = ['title', 'description', 'category', 'complete']
     success_url = reverse_lazy('tasks')
     def form_valid(self, form):
-        logger.info("\nAction: Create Task"+"\nTitle : "+ form.data['title'] + "\nDescription : "+ form.data['description'])
+        try:
+            if form.data['complete'] == 'on':
+                completness = 'Yes'
+            logger.info("\nAction: Create Task"+".\nTitle: "+ form.data['title'] + ".\nCategory: "+ form.data['category'] + ".\nDescription: "+ form.data['description']+ ".\nCompleted: "+ completness)
+        except:
+            logger.info("\nAction: Create Task"+".\nTitle: "+ form.data['title'] + ".\nCategory: "+ form.data['category'] + ".\nDescription: "+ form.data['description']+ ".\nCompleted: No")
         form.instance.user = self.request.user
         return super(TaskCreate, self).form_valid(form)
 
 
 class TaskUpdate(LoginRequiredMixin, UpdateView):
     model = Task
-    fields = ['title', 'description', 'complete']
+    fields = ['title', 'description', 'category', 'complete']
     success_url = reverse_lazy('tasks')
+    def form_valid(self, form):
+        try:
+            if form.data['complete'] == 'on':
+                completness = 'Yes'
+            logger.info("\nAction: Update Task"+".\nTitle: "+ form.data['title'] + ".\nCategory: "+ form.data['category'] + ".\nDescription: "+ form.data['description']+ ".\nCompleted: "+ completness)
+        except:
+            logger.info("\nAction: Update Task"+".\nTitle: "+ form.data['title'] + ".\nCategory: "+ form.data['category'] + ".\nDescription: "+ form.data['description']+ ".\nCompleted: No")
+        form.instance.user = self.request.user
+        return super(UpdateView, self).form_valid(form)        
+
 
 
 class DeleteView(LoginRequiredMixin, DeleteView):
     model = Task
     context_object_name = 'task'
-    success_url = reverse_lazy('tasks')
-    def get_queryset(self):
+    success_url = reverse_lazy('tasks')        
+    def get_queryset(self, **kwargs):
         owner = self.request.user
+        # print(self.model.objects.get(id=self.kwargs['pk']).complete)
+        if not (self.model.objects.get(id=self.kwargs['pk']).complete):
+            logger.warning('Incomplete task "'+self.model.objects.get(id=self.kwargs['pk']).title+'" is about to get deleted')
         return self.model.objects.filter(user=owner)
+    
 
 class TaskReorder(View):
     def post(self, request):
@@ -105,7 +134,6 @@ class TaskReorder(View):
 
         if form.is_valid():
             positionList = form.cleaned_data["position"].split(',')
-
             with transaction.atomic():
                 self.request.user.set_task_order(positionList)
 
@@ -118,3 +146,7 @@ def __gen_500_errors(request):
         logger.exception(e)
 
     return HttpResponse('Hello 500!')
+
+def error_404_view(request, exception):
+    logger.error("Page Not Found")
+    return render(request, '404.html')
